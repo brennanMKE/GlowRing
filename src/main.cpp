@@ -9,14 +9,19 @@
 
 static const char *TAG = "MAIN";
 
-#define NUM_LEDS 16
+const int BRIGHTNESS = 25;
+
+#define NUM_LEDS 9
 #define DATA_PIN 4
 
 CRGB leds[NUM_LEDS];
 
 int colorIndex = 0;
+bool forward = true;
+bool rainbowColors = true;
+int count = 0;
 
-const CRGB COLORS[] = {
+const CRGB RAINBOW_COLORS[] = {
     CRGB::Red,
     CRGB::Orange,
     CRGB::Yellow,
@@ -26,20 +31,50 @@ const CRGB COLORS[] = {
     CRGB::Violet
 };
 
-const int NUM_COLORS = sizeof(COLORS) / sizeof(COLORS[0]);
+const CRGB GREEN_COLORS[] = {
+    CRGB(0, 50, 0),  // Dark Green
+    CRGB(0, 75, 0),
+    CRGB(0, 100, 0),
+    CRGB(0, 125, 0),
+    CRGB(0, 150, 0),
+    CRGB(0, 175, 0),
+    CRGB(0, 200, 25),  // Start adding blue
+    CRGB(0, 225, 50),
+    CRGB(0, 250, 75),
+    CRGB(0, 255, 100)  // Light Green with Blue
+};
+
+const int NUM_RAINBOW_COLORS = sizeof(RAINBOW_COLORS) / sizeof(RAINBOW_COLORS[0]);
+const int NUM_GREEN_COLORS = sizeof(GREEN_COLORS) / sizeof(GREEN_COLORS[0]);
 
 void setup() { 
     FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
+    FastLED.setBrightness(BRIGHTNESS);
     FastLED.setMaxPowerInVoltsAndMilliamps(5, 500); // volts, mA
     ESP_LOGI(TAG, "Lights set up");
 }
 
 void loop() {
     EVERY_N_MILLIS(100, 1) {
+        const CRGB* colors = rainbowColors ? RAINBOW_COLORS : GREEN_COLORS;
+        int colorCount = rainbowColors ? NUM_RAINBOW_COLORS : NUM_GREEN_COLORS;
         for (int i = 0; i < NUM_LEDS; i++) {
-            leds[i] = COLORS[colorIndex];
-            colorIndex = colorIndex == 0 ? NUM_COLORS - 1 : colorIndex - 1;
-            FastLED.show();
+            leds[i] = colors[colorIndex];
+            if (forward) {
+                colorIndex = colorIndex == colorCount - 1 ? 0 : colorIndex + 1;
+            } else {
+                colorIndex = colorIndex == 0 ? colorCount - 1 : colorIndex - 1;
+            }
+        }
+        FastLED.show();
+        count++;
+        if (count % 10 == 0) {
+            forward = !forward;
+        }
+
+        if (count == 100) {
+            rainbowColors = !rainbowColors;
+            count = 0;
         }
     }
 }
