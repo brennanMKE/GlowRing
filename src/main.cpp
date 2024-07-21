@@ -55,7 +55,7 @@ void setup() {
 }
 
 void loop() {
-    EVERY_N_MILLIS(100, 1) {
+    EVERY_N_MILLIS(250, 1) {
         const CRGB* colors = rainbowColors ? RAINBOW_COLORS : GREEN_COLORS;
         int colorCount = rainbowColors ? NUM_RAINBOW_COLORS : NUM_GREEN_COLORS;
         for (int i = 0; i < NUM_LEDS; i++) {
@@ -68,13 +68,15 @@ void loop() {
         }
         FastLED.show();
         count++;
-        if (count % 10 == 0) {
+        if (count % 50 == 0) {
             forward = !forward;
+            ESP_LOGI(TAG, "Changing direction");
         }
 
         if (count == 100) {
             rainbowColors = !rainbowColors;
             count = 0;
+            ESP_LOGI(TAG, "Changing color mode");
         }
     }
 }
