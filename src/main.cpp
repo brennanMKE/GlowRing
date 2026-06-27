@@ -16,6 +16,13 @@ const int BRIGHTNESS = 25;
 
 CRGB leds[NUM_LEDS];
 
+// Each LED blends from its start color toward its target color over
+// TRANSITION_MS milliseconds whenever a new step is computed.
+CRGB startColors[NUM_LEDS];
+CRGB targetColors[NUM_LEDS];
+unsigned long transitionStart = 0;
+const unsigned long TRANSITION_MS = 250;
+
 int colorIndex = 0;
 bool forward = true;
 bool rainbowColors = true;
@@ -55,18 +62,21 @@ void setup() {
 }
 
 void loop() {
-    EVERY_N_MILLIS(250, 1) {
+    // Every TRANSITION_MS, compute the next set of target colors. The current
+    // on-screen colors become the start of the new blend.
+    EVERY_N_MILLIS(TRANSITION_MS, 1) {
         const CRGB* colors = rainbowColors ? RAINBOW_COLORS : GREEN_COLORS;
         int colorCount = rainbowColors ? NUM_RAINBOW_COLORS : NUM_GREEN_COLORS;
         for (int i = 0; i < NUM_LEDS; i++) {
-            leds[i] = colors[colorIndex];
+            startColors[i] = leds[i];
+            targetColors[i] = colors[colorIndex];
             if (forward) {
                 colorIndex = colorIndex == colorCount - 1 ? 0 : colorIndex + 1;
             } else {
                 colorIndex = colorIndex == 0 ? colorCount - 1 : colorIndex - 1;
             }
         }
-        FastLED.show();
+        transitionStart = millis();
         count++;
         if (count % 50 == 0) {
             forward = !forward;
@@ -79,4 +89,15 @@ void loop() {
             ESP_LOGI(TAG, "Changing color mode");
         }
     }
+
+    // Continuously interpolate each LED from its start color toward its target
+    // color so the change eases in over TRANSITION_MS instead of snapping.
+    unsigned long elapsed = millis() - transitionStart;
+    fract8 amount = elapsed >= TRANSITION_MS
+                        ? 255
+                        : (fract8)((elapsed * 255) / TRANSITION_MS);
+    for (int i = 0; i < NUM_LEDS; i++) {
+        leds[i] = blend(startColors[i], targetColors[i], amount);
+    }
+    FastLED.show();
 }
